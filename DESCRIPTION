@@ -1,0 +1,34 @@
+Package: EloSteepness.data
+Title: Data Sets for Package EloSteepness
+Version: 0.9.1
+Date: 2022-01-27
+Authors@R: c(
+  person(given="Christof", 
+         family="Neumann", 
+         role=c("aut", "cre"),
+         email="christofneumann1@gmail.com",
+         comment=c(ORCID="0000-0002-0236-1219"))
+  )
+Maintainer: Christof Neumann <christofneumann1@gmail.com>
+Description: Contains data sets for package EloSteepness.
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Depends: 
+  EloRating,
+  R (>= 3.5.0)
+Suggests: 
+  rmarkdown,
+  knitr,
+  kableExtra,
+  testthat (>= 3.0.0),
+  ape,
+  rethinking,
+  rstan,
+  cmdstanr,
+  brms,
+  EloSteepness
+Config/testthat/edition: 3
+VignetteBuilder: knitr
