@@ -1,0 +1,89 @@
+---
+title: "empirical_references"
+output: 
+  rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{empirical_references}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+bibliography: "`r system.file('extdata/refs.bib', package = 'EloSteepness.data')`"
+csl: "`r system.file('extdata/apa.csl', package = 'EloSteepness.data')`"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo=FALSE}
+suppressPackageStartupMessages(library(EloSteepness.data))
+suppressPackageStartupMessages(library(kableExtra))
+```
+
+```{r, eval=FALSE, echo=FALSE}
+library(EloSteepness.data)
+library(kableExtra)
+```
+
+```{r, echo=FALSE}
+data("empirical_key")
+m <- empirical_key
+m$species_fixed[is.na(m$species_fixed)] <- ""
+m <- m[order(m$datasetname), ]
+# m <- m[sample(1:500, 10), ]
+```
+
+```{r, echo=FALSE, results='asis'}
+# create reference keys that work inside tables...
+saves <- c("")
+for (i in seq_len(length(m$reference))) {
+  rkey <- gsub("@", "", m$reference[i])
+  rkey <- gsub(" ", "", rkey)
+  rkey <- gsub(";", "", rkey)
+  rkey <- gsub(":", "", rkey)
+  rkey <- gsub("\\.", "", rkey)
+  rkey <- gsub("-", "", rkey)
+  rkey <- paste0("(ref:", rkey, ")")
+  if (!rkey %in% saves & !m$datasetname[i] %in% c("micheletta2011_dom_1")) {
+    cat("\n\n")
+  }
+  saves <- c(saves, rkey)
+}
+```
+
+
+```{r, echo=FALSE, eval=T, results='asis'}
+kable(m, longtable = T, caption = "Dominance interaction networks", row.names = FALSE, booktabs = T, linesep = "", 
+      col.names = c("data set", "scientific name", "common name", "group size", "interactions", "sparseness", "reference")) %>% 
+kable_styling(font_size = 9, latex_options = c("repeat_header"), repeat_header_text = "(continued)",
+                    full_width = T) %>% kableExtra::landscape() %>% 
+  column_spec(column = 1, width = "1.7in") %>% 
+  column_spec(column = 2, width = "1.4in", italic = F) %>% 
+  column_spec(column = 3, width = "1.4in") %>% 
+  column_spec(column = 4, width = "0.5in") %>% 
+  column_spec(column = 5, width = "0.5in") %>% 
+  column_spec(column = 6, width = "0.5in") %>% 
+  column_spec(column = 7, width = "2.5in")
+
+```
+
+```{r, echo=FALSE, eval=F, results='asis'}
+kable(m, "latex", longtable = T, caption = "Dominance interaction networks", row.names = FALSE, booktabs = T, linesep = "", 
+      col.names = c("data set", "scientific name", "common name", "group size", "interactions", "sparseness", "reference")) %>% 
+kable_styling(font_size = 9, latex_options = c("repeat_header"), repeat_header_text = "(continued)",
+                    full_width = T) %>% kableExtra::landscape() %>% 
+  column_spec(column = 1, width = "1.7in") %>% 
+  column_spec(column = 2, width = "1.4in", italic = F) %>% 
+  column_spec(column = 3, width = "1.4in") %>% 
+  column_spec(column = 4, width = "0.5in") %>% 
+  column_spec(column = 5, width = "0.5in") %>% 
+  column_spec(column = 6, width = "0.5in") %>% 
+  column_spec(column = 7, width = "2.5in")
+
+```
+
+# References
