@@ -1,4 +1,4 @@
-This package contains the data, code and results to replicate the analyses for *Extending Bayesian Elo-rating to quantify dominance hierarchy steepness*.
+This package contains the data, code and results to replicate the analyses for [*Extending Bayesian Elo-rating to quantify dominance hierarchy steepness*](https://doi.org/10.1101/2022.01.28.478016).
 
 To install `EloSteepness.data` you require the `devtools` package (which you can get via `install.packages("devtools")`). 
 You also require `EloRating` (`install.packages("EloRating")`)
