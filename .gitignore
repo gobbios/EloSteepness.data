@@ -1,4 +1,4 @@
-man/*.Rd
+# man/*.Rd
 src/*.gcda
 .DS_Store
 run_vignette.R
