@@ -1,9 +1,0 @@
-\documentclass{article}
-\usepackage{pdfpages}
-%\VignetteIndexEntry{phylogenetic_analyses}
-%\VignettePackage{EloSteepness.data}
-%\VignetteEncoding{UTF-8}
-\begin{document}
-\SweaveOpts{concordance=TRUE}
-\includepdf[pages=-, fitpaper=true]{pdf_files/phylogenetic_examples.pdf}
-\end{document}

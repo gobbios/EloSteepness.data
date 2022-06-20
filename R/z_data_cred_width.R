@@ -4,4 +4,6 @@
 #' @format \code{cred_width} is a data frame with 1,670 observations, each line
 #'         corresponding to one matrix with steepness evaluated and extracted
 #'         width of the 89\% credible interval
+#' @details The data sets correspond to the 1,000 artificial data sets we
+#'          created and the 670 empiricial data sets.
 "cred_width"

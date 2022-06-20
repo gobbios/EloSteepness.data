@@ -3,6 +3,6 @@
 #' @source Christof Neumann
 #' @references see vignette for references
 #' @aliases phylo_data phylo_matrices
-#' @format \code{phylo_matrices} is a list of 104 interaction matrices and
+#' @format \code{phylo_matrices} is a list of 67 interaction matrices and
 #'         \code{phylo_key} contains matching information on species and references
 "phylo_key"

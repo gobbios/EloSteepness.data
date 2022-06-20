@@ -1,13 +1,20 @@
 ---
 title: "phylogenetic examples"
-output:
-  rmarkdown::pdf_document:
+author: "Christof Neumann"
+date: "`r Sys.Date()`"
+output: 
+  bookdown::pdf_document2:
     toc: true
+    keep_tex: false
+urlcolor: blue
+vignette: >
+  %\VignetteIndexEntry{phylogenetic_examples}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 editor_options:
   chunk_output_type: console
-knit: (function(inputFile, encoding, ...) {
-    rmarkdown::render(inputFile, encoding = encoding, output_dir = "pdf_files/")
-  })
+csl: apa.csl
+bibliography: refs.bib
 ---
 
 ```{r, include = FALSE}
@@ -18,22 +25,31 @@ knitr::opts_chunk$set(
 ```
 
 ```{r, echo=FALSE}
+suppressPackageStartupMessages(library(EloSteepness))
 suppressPackageStartupMessages(library(EloSteepness.data))
 suppressPackageStartupMessages(library(rstan))
 suppressPackageStartupMessages(library(cmdstanr))
 suppressPackageStartupMessages(library(ape))
+suppressPackageStartupMessages(library(brms))
+suppressPackageStartupMessages(library(xtable))
+# suppressPackageStartupMessages(library(kableExtra))
 ```
 
 
-This document contains the code to replicate the two analyses of macaque hierarchy steepness (one analysis in the main text, one in the appendix).
+This document contains the code to replicate the two analyses of macaque hierarchy steepness (one analysis in the main text, one in the appendix) from *Extending Bayesian Elo-rating to quantify the steepness of dominance hierarchies* (https://doi.org/10.1101/2022.01.28.478016).
+It was built using `EloSteepness` (version `r packageVersion("EloSteepness")`) and `EloSteepness.data` (version `r  packageVersion("EloSteepness.data")`).
 
 
 
 ```{r setup}
+library(EloSteepness)
 library(EloSteepness.data)
 library(rstan)
 library(cmdstanr)
 library(ape)
+library(brms)
+library(xtable) # just for table generation in this document
+# library(kableExtra) # just for table generation in this document
 ```
 
 # Comparative example from the main text
@@ -81,12 +97,12 @@ for (m in seq_len(nrow(specdata))) {
 
 For the sake of this vignette we reduce the number of species and also the number of interactions in the networks.
 We do this just because it speeds up the sampling from the model.
-With the full data set, this would take several hours (about six on my fairly old laptop).
-With the reduced data set this goes faster (but still takes a few minutes).
+With the full data set, this would take several hours (about four on my fairly old laptop).
+With the reduced data set this takes less time to run (but still takes a few minutes).
 
 ```{r}
 # ignore these lines if you want to run the full data set
-specdata <- specdata[specdata$groupsize < 6, ]
+specdata <- specdata[specdata$groupsize < 7, ]
 interaction_matrices <- interaction_matrices[specdata$datasetname]
 tree <- keep.tip(tree, specdata$spec)
 interaction_matrices <- lapply(interaction_matrices, function(x) ceiling(x / 5))
@@ -127,38 +143,43 @@ for (i in seq_len(nrow(specdata))) {
   species_index[i] <- which(colnames(tree_mat) == specdata$spec[i])
 }
 
-# for phylogeny part
+# for phylogeny part of the model
 xdata$N_phyl <- n_spec # N_1
 xdata$N_coeff_phyl <- 1 # number of parameters: 1 = SD for phyl 'intercepts'
 xdata$spec_index <- species_index
-xdata$chol_mat <- t(chol(tree_mat)) # cholesky factor of phylogenetic correlation matrix
+xdata$chol_mat <- t(chol(tree_mat)) # Cholesky factor of phylogenetic correlation matrix
 xdata$phyl_predictor <- rep(1, nrow(specdata)) # group-level predictor values
 
-# repeated measures
-xdata$N_repeated <- n_spec # the same as for the phyl part
+# for repeated measures part of the model
+xdata$N_repeated <- n_spec # the same as for the phylogeny part
 # number of parameters: 1 = SD for repeated measurements (species intercepts)
 xdata$N_coeff_repeated <- 1
 xdata$index_rep_measures <- species_index # the same as for the phyl part
 # group-level predictor values, the same as for the phyl part
 xdata$rep_measures_predictor <- rep(1, nrow(specdata))
-
 ```
 
 
-```{r modelcompile1, cache=TRUE}
+```{r modelcompile1, cache=FALSE, warning = FALSE, include=FALSE, results = 'hide'}
 # compile stan model
 xmod1 <- cmdstan_model(stan_file = mod1, compile = TRUE)
 ```
 
-```{r modelfit1, cache=TRUE, results='hide', echo=FALSE}
+```{r modelcompile1_display, eval = FALSE}
+# compile stan model
+xmod1 <- cmdstan_model(stan_file = mod1, compile = TRUE)
+```
+
+
+```{r modelfit1, cache=FALSE, results='hide', echo=FALSE, warning = FALSE, include=FALSE}
 # sampling
 res1 <- suppressMessages(xmod1$sample(data = xdata,
                                       refresh = 0,
                                       parallel_chains = 4,
-                                      iter_warmup = 500,
+                                      iter_warmup = 1000,
                                       iter_sampling = 500,
                                       seed = 1,
-                                      adapt_delta = 0.9))
+                                      adapt_delta = 0.8))
 ```
 
 ```{r modelfit1_demo, eval=FALSE}
@@ -173,7 +194,7 @@ res1 <- xmod1$sample(data = xdata,
 ```
 
 
-```{r}
+```{r, cache=FALSE}
 stanfit <- rstan::read_stan_csv(res1$output_files())
 xsummary <- summary(stanfit)$summary
 round(summary(stanfit, pars = c("sd_repeated_measures", "sd_phyl"))$summary, 2)
@@ -198,9 +219,11 @@ for (i in seq_along(tips)) {
 
 par(mar = c(3, 2.5, 1.5, 1))
 
-x <- as.numeric(rstan::extract(stanfit, pars = c("sd_phyl"))$sd_phyl)
-y <- as.numeric(rstan::extract(stanfit, pars = c("sd_repeated_measures"))$sd_repeated_measures)
-xvals <- brms::rstudent_t(10000, 3, 0, 2.5)
+# posteriors
+x <- as.numeric(extract(stanfit, pars = c("sd_phyl"))$sd_phyl)
+y <- as.numeric(extract(stanfit, pars = c("sd_repeated_measures"))$sd_repeated_measures)
+# priors
+xvals <- rstudent_t(10000, 3, 0, 2.5)
 while (any(xvals < 0)) {
   xvals[xvals < 0] <- brms::rstudent_t(sum(xvals < 0), 3, 0, 2.5)
 }
@@ -296,19 +319,28 @@ xdata$index_rep_measures <- species_index # the same as for the phyl part
 xdata$rep_measures_predictor <- rep(1, nrow(specdata))
 ```
 
-```{r modelcompile2, cache=TRUE}
+```{r modelcompile2, cache=FALSE, warning = FALSE, include=FALSE, results='hide'}
 # compile stan model
 xmod2 <- cmdstan_model(stan_file = mod2, compile = TRUE)
 ```
 
-```{r modelfit2, cache=TRUE, results='hide', echo=FALSE}
+
+```{r modelcompile2_display, eval=FALSE}
+# compile stan model
+xmod2 <- cmdstan_model(stan_file = mod2, compile = TRUE)
+```
+
+```{r modelfit2, cache=FALSE, results='hide', echo=FALSE, warning = FALSE}
 # sampling
 res2 <- suppressMessages(xmod2$sample(data = xdata,
                    refresh = 0,
+                   iter_warmup = 1000,
+                   iter_sampling = 500,
                    parallel_chains = 4,
                    seed = 123,
-                   adapt_delta = 0.9))
+                   adapt_delta = 0.8))
 ```
+
 
 ```{r modelfit2_demo, eval=FALSE}
 # sampling
@@ -320,19 +352,24 @@ res2 <- xmod2$sample(data = xdata,
 ```
 
 
+
+
+
+
+
 ```{r, out.width="100%", fig.width=9, fig.height=4, fig.retina=2}
 # convert back to rstan (for easier handling of output)
-stanfit <- rstan::read_stan_csv(res2$output_files())
-xsummary <- summary(stanfit)$summary
-round(summary(stanfit,
+stanfit2 <- read_stan_csv(res2$output_files())
+xsummary2 <- summary(stanfit2)$summary
+round(summary(stanfit2,
       pars = c("sd_phyl", "sd_repeated_measures", "phi", "Intercept"))$summary, 2)
 
 # optional saving of results
-# save(xmod, xsummary, res, stanfit, xdata, specdata, tree, file = "comp_analysis_2.RData")
+# save(xmod2, xsummary2, res2, stanfit2, xdata, specdata, tree, file = "comp_analysis_2.RData")
 
 # plot in the manuscript
-sd_phyl <- sprintf("%.2f", xsummary["sd_phyl[1]", 1])
-sd_rep <- sprintf("%.2f", xsummary["sd_repeated_measures[1]", 1])
+sd_phyl <- sprintf("%.2f", xsummary2["sd_phyl[1]", 1])
+sd_rep <- sprintf("%.2f", xsummary2["sd_repeated_measures[1]", 1])
 
 par(mfrow = c(1, 2), family = "serif")
 par(family = "serif", mgp = c(1.8, 0.7, 0), las = 1, mar = c(2, 1, 1, 1))
@@ -350,11 +387,11 @@ for (i in seq_along(tips)) {
 par(mar = c(3, 2.5, 1.5, 1))
 
 # extract posterior samples for SDs and corresponding priors
-est_phyl <- as.numeric(rstan::extract(stanfit, pars = c("sd_phyl"))$sd_phyl)
-est_rep <- as.numeric(rstan::extract(stanfit, pars = c("sd_repeated_measures"))$sd_repeated_measures)
+est_phyl <- as.numeric(extract(stanfit2, pars = c("sd_phyl"))$sd_phyl)
+est_rep <- as.numeric(extract(stanfit2, pars = c("sd_repeated_measures"))$sd_repeated_measures)
 
-pr_phyl <- as.numeric(rstan::extract(stanfit, pars = c("prior_sd_phyl"))$prior_sd_phyl)
-pr_rep <- as.numeric(rstan::extract(stanfit, pars = c("prior_sd_repeated_measures"))$prior_sd_repeated_measures)
+pr_phyl <- as.numeric(extract(stanfit2, pars = c("prior_sd_phyl"))$prior_sd_phyl)
+pr_rep <- as.numeric(extract(stanfit2, pars = c("prior_sd_repeated_measures"))$prior_sd_repeated_measures)
 
 # and densities of posteriors
 est_phyl <- density(est_phyl, adjust = 1)
@@ -394,3 +431,136 @@ legend("topright", ncol = 1, col = c("#3B99B1", "#EACB2B", "grey"),
        legend = c("phylogenetic", "repeated measurements", "priors"),
        pch = 15, bty = "n")
 ```
+
+\newpage
+
+
+# Data summary
+
+Table \ref{tab:domnets} provides data summaries and references for the analyses run above.
+
+```{r, echo=FALSE, results='asis'}
+data("phylo_key")
+data("phylo_matrices")
+m <- phylo_key
+m$species_fixed[is.na(m$species_fixed)] <- ""
+m <- m[order(m$datasetname), ]
+p <- phylo_matrices[m$datasetname]
+m$group_size <- unlist(lapply(p, ncol))
+m$interactions <- unlist(lapply(p, sum))
+m$sparseness <- round(unlist(lapply(p, function(x)prunk(x)[1])), 2)
+
+m <- m[, c("datasetname", "species_fixed", "common_name", "group_size", "interactions", "sparseness", "reference")]
+m$species_fixed <- gsub("_", " ", m$species_fixed)
+
+# create reference keys that work inside tables...
+x <- unique(unlist(regmatches(x = m$reference, gregexpr("(@[a-z-]+[0-9]{4}[a-d]{0,1})", text = m$reference))))
+cat(paste(paste0("(ref:", gsub(pattern = "^@", "", x), ") ", x), collapse = "\n\n"))
+
+
+
+# saves <- c()
+# for (i in seq_len(length(m$reference))) {
+#   rkey <- gsub("@", "", m$reference[i])
+#   rkey <- gsub(" ", "", rkey)
+#   rkey <- gsub(";", ",", rkey)
+#   saves <- c(saves, rkey)
+# }
+# saves[saves == "Micheletta(pers.comm.)" ] <- "Micheletta (pers. comm.)" 
+```
+
+\setlength\LTleft{-0.8in}
+
+\setlength\LTright{-1in}
+
+```{r, echo=FALSE, results='asis'}
+for (i in 1:nrow(m)) {
+  x <- m$reference[i]
+  y <- unlist(regmatches(x = x, gregexpr("(@[a-z-]+[0-9]{4}[a-d]{0,1})", text = x)))
+  for (k in y) {
+    x <- gsub(pattern = k, paste0("(ref:", gsub(pattern = "^@", "", k), ")"), x)
+  }
+  m$reference[i] <- x
+}
+
+m$datasetname <- gsub("_", "\\\\_", m$datasetname)
+m$species_fixed <- paste0("\\textit{", m$species_fixed, "}")
+
+colnames(m) <- gsub("\\_", " ", colnames(m))
+colnames(m)[1:2] <- c("data set", "species")
+# colnames(m)
+
+d <- c("d", "s", "s", "s", "d", "d", "f", "s")
+
+xtab <- xtable(m[, 1:7], 
+               label = "tab:domnets", 
+               caption = "Macaque dominance interaction networks", 
+               display = d)
+align(xtab) <- c("p{0.1\\textwidth}", 
+                 "p{0.23\\textwidth}", 
+                 "p{0.19\\textwidth}",
+                 "p{0.2\\textwidth}",
+                 "p{0.04\\textwidth}",
+                 "p{0.08\\textwidth}", 
+                 "p{0.08\\textwidth}",
+                 "p{0.22\\textwidth}")
+
+addtorow <- list()
+addtorow$pos <- list()
+addtorow$pos[[1]] <- c(0)
+addtorow$command <- c(paste(
+  "\\hline \n",
+  "\\endhead \n",
+  "\\hline \n",
+  "{\\footnotesize Continued on next page} \n",
+  "\\endfoot \n",
+  "\\endlastfoot \n",
+  sep = ""))
+
+# addtorow <- list(pos = list(0),command = "\\hline \\endhead ")
+print(xtab, 
+      tabular.environment = "longtable",
+      caption.placement = "top", 
+      sanitize.text.function = function(x) {x}, 
+      booktabs = TRUE,
+      floating = FALSE,
+      comment = FALSE,
+      include.rownames = FALSE, 
+      size = "\\footnotesize", #  size="\\fontsize{7pt}{9pt}\\selectfont", 
+      hline.after = c(-1, nrow(xtab)),
+      add.to.row = addtorow)
+```
+
+
+```{r, echo=FALSE, eval=FALSE, results='markup'}
+m$reference <- saves
+x <- m[, -3]
+x$datasetname <- gsub("_", "\\\\_", x$datasetname)
+x$reference[saves != "Micheletta (pers. comm.)"] <- paste0("\\cite{", x$reference[saves != "Micheletta (pers. comm.)" ], "}")
+
+kable(x, format = "latex", 
+      longtable = TRUE,
+      caption = "Macaque dominance interaction networks",
+      row.names = FALSE, 
+      booktabs = TRUE,
+      linesep = "", 
+      escape = FALSE,
+      col.names = c("data set", "scientific name", "group size", "interactions", "sparseness", "source")) %>% 
+  kable_styling(font_size = 8, 
+                latex_options = c("repeat_header"), 
+                repeat_header_text = "(continued)", 
+                full_width = TRUE) %>% 
+  column_spec(column = 1, width = "1.7in") %>%
+  column_spec(column = 2, width = "1.1in", italic = TRUE) %>%
+  column_spec(column = 3, width = "0.4in") %>%
+  column_spec(column = 4, width = "0.4in") %>%
+  column_spec(column = 5, width = "0.7in") %>%
+  column_spec(column = 6, width = "1.6in")
+
+```
+
+
+\newpage
+
+
+# References

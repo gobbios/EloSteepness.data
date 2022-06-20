@@ -1,15 +1,23 @@
 ---
-title: "empirical_references"
-output: 
-  rmarkdown::html_vignette
+title: "empirical references"
+author: "Christof Neumann"
+date: "`r Sys.Date()`"
 vignette: >
   %\VignetteIndexEntry{empirical_references}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-bibliography: "`r system.file('extdata/refs.bib', package = 'EloSteepness.data')`"
-csl: "`r system.file('extdata/apa.csl', package = 'EloSteepness.data')`"
+bibliography: refs.bib
+output: 
+  bookdown::pdf_document2:
+    keep_tex: false
+    toc: false
+urlcolor: blue
 editor_options: 
   chunk_output_type: console
+header-includes: 
+  - \usepackage{graphicx}   
+  - \usepackage{longtable}
+csl: apa.csl
 ---
 
 ```{r, include = FALSE}
@@ -21,69 +29,106 @@ knitr::opts_chunk$set(
 
 ```{r setup, echo=FALSE}
 suppressPackageStartupMessages(library(EloSteepness.data))
-suppressPackageStartupMessages(library(kableExtra))
+# suppressPackageStartupMessages(library(kableExtra))
+suppressPackageStartupMessages(library(xtable))
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
 library(EloSteepness.data)
-library(kableExtra)
+# library(kableExtra)
+library(xtable)
 ```
 
-```{r, echo=FALSE}
-data("empirical_key")
-m <- empirical_key
-m$species_fixed[is.na(m$species_fixed)] <- ""
-m <- m[order(m$datasetname), ]
-# m <- m[sample(1:500, 10), ]
+
+This document contains the sources and references for the empirical data we used in *Extending Bayesian Elo-rating to quantify the steepness of dominance hierarchies* (https://doi.org/10.1101/2022.01.28.478016).
+It was built using `EloSteepness.data` (version `r  packageVersion("EloSteepness.data")`).
+
+
+The actual matrices are in:
+
+```{r, eval = FALSE}
+library(EloSteepness.data)
+empirical_matlist
 ```
+
+
 
 ```{r, echo=FALSE, results='asis'}
-# create reference keys that work inside tables...
-saves <- c("")
-for (i in seq_len(length(m$reference))) {
-  rkey <- gsub("@", "", m$reference[i])
-  rkey <- gsub(" ", "", rkey)
-  rkey <- gsub(";", "", rkey)
-  rkey <- gsub(":", "", rkey)
-  rkey <- gsub("\\.", "", rkey)
-  rkey <- gsub("-", "", rkey)
-  rkey <- paste0("(ref:", rkey, ")")
-  if (!rkey %in% saves & !m$datasetname[i] %in% c("micheletta2011_dom_1")) {
-    cat("\n\n")
+
+data("empirical_key")
+m <- empirical_key
+# m <- m[sample(nrow(m), 60), ]
+m$species_fixed[is.na(m$species_fixed)] <- ""
+m <- m[order(m$datasetname), ]
+m$datasetname <- gsub("_", "\\\\_", m$datasetname)
+
+x <- unique(unlist(regmatches(x = m$reference, gregexpr("(@[a-z-]+[0-9]{4}[a-d]{0,1})", text = m$reference))))
+cat(paste(paste0("(ref:", gsub(pattern = "^@", "", x), ") ", x), collapse = "\n\n"))
+```
+
+\setlength\LTleft{-0.8in}
+
+\setlength\LTright{-1in}
+
+```{r, echo=FALSE, results='asis'}
+for (i in 1:nrow(m)) {
+  x <- m$reference[i]
+  y <- unlist(regmatches(x = x, gregexpr("(@[a-z-]+[0-9]{4}[a-d]{0,1})", text = x)))
+  for (k in y) {
+    x <- gsub(pattern = k, paste0("(ref:", gsub(pattern = "^@", "", k), ")"), x)
   }
-  saves <- c(saves, rkey)
+  m$reference[i] <- x
 }
+
+m$species_fixed <- paste0("\\textit{", m$species_fixed, "}")
+
+colnames(m) <- gsub("\\_", " ", colnames(m))
+colnames(m)[1:2] <- c("data set", "species")
+# colnames(m)
+
+d <- c("d", "s", "s", "s", "d", "d", "f", "s")
+a <- c("p{1cm}", "p{4cm}", "p{4cm}", "p{4cm}", "p{1cm}", "p{1cm}", "p{1.5cm}", "p{3cm}")
+# a <- c("p{1cm}", "p{4cm}", "p{4cm}", "p{4cm}", "p{1cm}", "p{1cm}", "p{1.5cm}", "p{3cm}")
+# xtab <- xtable(m[, 1:7],label='tabbidafafg',caption='Example of longtable spanning several pages', display = d, align = a)
+
+xtab <- xtable(m[, 1:7], 
+               label = "tab:domnets", 
+               caption = "Dominance interaction networks", 
+               display = d)
+align(xtab) <- c("p{0.1\\textwidth}", 
+                 "p{0.23\\textwidth}", 
+                 "p{0.19\\textwidth}",
+                 "p{0.2\\textwidth}",
+                 "p{0.04\\textwidth}",
+                 "p{0.08\\textwidth}", 
+                 "p{0.08\\textwidth}",
+                 "p{0.22\\textwidth}")
+
+addtorow <- list()
+addtorow$pos <- list()
+addtorow$pos[[1]] <- c(0)
+addtorow$command <- c(paste(
+  "\\hline \n",
+  "\\endhead \n",
+  "\\hline \n",
+  "{\\footnotesize Continued on next page} \n",
+  "\\endfoot \n",
+  "\\endlastfoot \n",
+  sep = ""))
+
+# addtorow <- list(pos = list(0),command = "\\hline \\endhead ")
+print(xtab, 
+      tabular.environment = "longtable",
+      caption.placement = "top", 
+      sanitize.text.function = function(x) {x}, 
+      booktabs = TRUE,
+      floating = FALSE,
+      comment = FALSE,
+      include.rownames = FALSE, 
+      size = "\\footnotesize", #  size="\\fontsize{7pt}{9pt}\\selectfont", 
+      hline.after = c(-1, nrow(xtab)),
+      add.to.row = addtorow)
 ```
 
-
-```{r, echo=FALSE, eval=T, results='asis'}
-kable(m, longtable = T, caption = "Dominance interaction networks", row.names = FALSE, booktabs = T, linesep = "", 
-      col.names = c("data set", "scientific name", "common name", "group size", "interactions", "sparseness", "reference")) %>% 
-kable_styling(font_size = 9, latex_options = c("repeat_header"), repeat_header_text = "(continued)",
-                    full_width = T) %>% kableExtra::landscape() %>% 
-  column_spec(column = 1, width = "1.7in") %>% 
-  column_spec(column = 2, width = "1.4in", italic = F) %>% 
-  column_spec(column = 3, width = "1.4in") %>% 
-  column_spec(column = 4, width = "0.5in") %>% 
-  column_spec(column = 5, width = "0.5in") %>% 
-  column_spec(column = 6, width = "0.5in") %>% 
-  column_spec(column = 7, width = "2.5in")
-
-```
-
-```{r, echo=FALSE, eval=F, results='asis'}
-kable(m, "latex", longtable = T, caption = "Dominance interaction networks", row.names = FALSE, booktabs = T, linesep = "", 
-      col.names = c("data set", "scientific name", "common name", "group size", "interactions", "sparseness", "reference")) %>% 
-kable_styling(font_size = 9, latex_options = c("repeat_header"), repeat_header_text = "(continued)",
-                    full_width = T) %>% kableExtra::landscape() %>% 
-  column_spec(column = 1, width = "1.7in") %>% 
-  column_spec(column = 2, width = "1.4in", italic = F) %>% 
-  column_spec(column = 3, width = "1.4in") %>% 
-  column_spec(column = 4, width = "0.5in") %>% 
-  column_spec(column = 5, width = "0.5in") %>% 
-  column_spec(column = 6, width = "0.5in") %>% 
-  column_spec(column = 7, width = "2.5in")
-
-```
 
 # References
