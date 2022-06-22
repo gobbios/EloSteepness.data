@@ -2,11 +2,11 @@ functions {
   // functions needed
   // ProbFunction: adapted from Goffe et al 2018
   //   returns ratings given the start values, k and interaction outcomes
-  // cum_winprob: 
+  // cum_winprob:
   //   calculate cumulative winning probs given the final ratings, k and interaction outcomes
   // cumwinprob2steep:
   //   calculates steepness from cumulative winning probs
-  
+
   real[] ProbFunction(vector start_vals, real k, int n_interactions, int n_ids, int[] winner_index, int[] loser_index) {
     real result[n_interactions];
     real to_add;
@@ -40,7 +40,7 @@ functions {
       cur_rating[winner_index[i]] = cur_rating[winner_index[i]] + to_add;
       cur_rating[loser_index[i]] = cur_rating[loser_index[i]] - to_add;
     }
-    
+
     // pairwise winprobs
     for (i in 1:(n_ids - 1)) {
       for (j in (i + 1):n_ids) {
@@ -130,7 +130,7 @@ data {
   // per-dataset-info
   int<lower=1> n_ids_per_dataset[n_datasets]; // ids per dataset
   int<lower=1> n_interactions_per_dataset[n_datasets]; // interactions per dataset
-  
+
   // navigating
   int<lower=1> interaction_index[n_total_interactions];
   int<lower=1> individual_index[n_total_ids];
@@ -140,7 +140,7 @@ data {
   // interaction data
   int<lower=1> winner[n_total_interactions, 1]; // winner's index (within data set); columns pertain to n_rand (not yet suported)
   int<lower=1> loser[n_total_interactions, 1]; // losers's index (within data set); columns pertain to n_rand (not yet suported)
-  
+
   // misc
   int<lower=0> y[n_total_interactions]; // outcome, i.e. winner always wins -> all values are 1
 
@@ -149,11 +149,11 @@ data {
   int<lower=1> N_coeff_repeated; //number of coefficients (here: 1 [SD])
   int<lower=1> index_rep_measures[n_datasets]; // grouping indicator per observation
   vector[n_datasets] rep_measures_predictor; // group-level predictor values (intercept only)
-  
+
   // data for phylogeny related information
   int<lower=1> N_phyl;
   int<lower=1> N_coeff_phyl;
-  int<lower=1> spec_index[n_datasets]; 
+  int<lower=1> spec_index[n_datasets];
   matrix[N_phyl, N_phyl] chol_mat; // cholesky factor of phylogenetic correlation matrix
   vector[n_datasets] phyl_predictor; // group-level predictor values (intercept only)
 }
@@ -161,11 +161,11 @@ data {
 parameters {
   matrix[1, n_total_ids] EloStart_raw; // rows pertain to n_rand (not yet suported)
   vector<lower=0>[n_datasets] k_values; // k per data set
-  
+
   // for overall beta model (steepness)
   real Intercept;
   real<lower=0> phi;
-  
+
   vector<lower=0>[N_coeff_repeated] sd_repeated_measures; // group-level standard deviations for repeated measures
   vector[N_repeated] blups_repeated_measures[N_coeff_repeated]; // BLUPS for repeated measurements
 
@@ -192,7 +192,7 @@ model {
   // initiate vectors for beta model
   vector[n_datasets] steepness_as_response;
   vector[n_datasets] mu = Intercept + rep_vector(0.0, n_datasets);
-  
+
   // estimate steepness for each data set
   for (d in 1:n_datasets) {
     int idx_individual[n_ids_per_dataset[d]];
@@ -204,38 +204,38 @@ model {
     idx_interaction = segment(interaction_index, index_dataset_interactions_start[d], n_interactions_per_dataset[d]);
 
     EloStart_raw[1, idx_individual] ~ normal(0, 1);
-    
-    y[idx_interaction] ~ bernoulli(ProbFunction(to_vector(EloStart[1, idx_individual]), 
+
+    y[idx_interaction] ~ bernoulli(ProbFunction(to_vector(EloStart[1, idx_individual]),
                                                 k_values[d],
                                                 n_interactions_per_dataset[d],
                                                 n_ids_per_dataset[d],
-                                                winner[idx_interaction, 1], 
+                                                winner[idx_interaction, 1],
                                                 loser[idx_interaction, 1]));
-    
+
     cumwinprobs = cum_winprob(to_vector(EloStart[1, idx_individual]),
                               k_values[d],
                               n_interactions_per_dataset[d],
                               n_ids_per_dataset[d],
-                              winner[idx_interaction, 1], 
+                              winner[idx_interaction, 1],
                               loser[idx_interaction, 1]);
-    
-    steepness_as_response[d] = cumwinprob2steep(to_vector(cumwinprobs), 
+
+    steepness_as_response[d] = cumwinprob2steep(to_vector(cumwinprobs),
                                                 n_ids_per_dataset[d])[2];
   }
-  
+
   // initialize linear predictor term
   for (n in 1:n_datasets) {
-    mu[n] += eff_repeated[index_rep_measures[n]] * rep_measures_predictor[n] 
+    mu[n] += eff_repeated[index_rep_measures[n]] * rep_measures_predictor[n]
           + eff_phyl[spec_index[n]] * phyl_predictor[n];
   }
   for (n in 1:n_datasets) {
     // inverse link function
     mu[n] = inv_logit(mu[n]);
   }
-  
+
   // likelihood for steepness model
   steepness_as_response ~ beta(mu * phi, (1.0 - mu) * phi);
-  
+
   // priors
   Intercept ~ student_t(3, 0, 2.5);
   phi ~ gamma(0.01, 0.01);
@@ -246,8 +246,13 @@ model {
 }
 
 generated quantities {
+  // priors
+  real prior_sd_phyl = student_t_rng(3, 0, 2.5);
+  real prior_sd_repeated_measures = student_t_rng(3, 0, 2.5);
+
   // return actual steepness values per data set in the output
   vector[n_datasets] steepness;
+
   for (d in 1:n_datasets) {
     int idx[n_ids_per_dataset[d]];
     int idx_interaction[n_interactions_per_dataset[d]];
@@ -255,13 +260,21 @@ generated quantities {
     idx = segment(individual_index, index_individuals_start[d], n_ids_per_dataset[d]);
     idx_interaction = segment(interaction_index, index_dataset_interactions_start[d], n_interactions_per_dataset[d]);
 
-    cumwinprobs = cum_winprob(to_vector(EloStart[1, idx]), 
-                                          k_values[d], 
+    cumwinprobs = cum_winprob(to_vector(EloStart[1, idx]),
+                                          k_values[d],
                                           n_interactions_per_dataset[d],
-                                          n_ids_per_dataset[d], 
-                                          winner[idx_interaction, 1], 
+                                          n_ids_per_dataset[d],
+                                          winner[idx_interaction, 1],
                                           loser[idx_interaction, 1]);
     steepness[d] = cumwinprob2steep(to_vector(cumwinprobs), n_ids_per_dataset[d])[2];
+  }
+
+    // rejection sampling for SDs
+  while (prior_sd_phyl < 0) {
+    prior_sd_phyl = student_t_rng(3,0,2.5);
+  }
+  while (prior_sd_repeated_measures < 0) {
+    prior_sd_repeated_measures = student_t_rng(3, 0, 2.5);
   }
 
 }

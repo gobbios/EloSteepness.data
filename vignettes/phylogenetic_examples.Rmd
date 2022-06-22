@@ -30,9 +30,7 @@ suppressPackageStartupMessages(library(EloSteepness.data))
 suppressPackageStartupMessages(library(rstan))
 suppressPackageStartupMessages(library(cmdstanr))
 suppressPackageStartupMessages(library(ape))
-suppressPackageStartupMessages(library(brms))
 suppressPackageStartupMessages(library(xtable))
-# suppressPackageStartupMessages(library(kableExtra))
 ```
 
 
@@ -47,9 +45,7 @@ library(EloSteepness.data)
 library(rstan)
 library(cmdstanr)
 library(ape)
-library(brms)
 library(xtable) # just for table generation in this document
-# library(kableExtra) # just for table generation in this document
 ```
 
 # Comparative example from the main text
@@ -222,12 +218,14 @@ par(mar = c(3, 2.5, 1.5, 1))
 # posteriors
 x <- as.numeric(extract(stanfit, pars = c("sd_phyl"))$sd_phyl)
 y <- as.numeric(extract(stanfit, pars = c("sd_repeated_measures"))$sd_repeated_measures)
+
 # priors
-xvals <- rstudent_t(10000, 3, 0, 2.5)
-while (any(xvals < 0)) {
-  xvals[xvals < 0] <- rstudent_t(sum(xvals < 0), 3, 0, 2.5)
-}
-p3 <- density(xvals, adjust = 1)
+pr_phyl <- as.numeric(extract(stanfit, pars = c("prior_sd_phyl"))$prior_sd_phyl)
+pr_rep <- as.numeric(extract(stanfit, pars = c("prior_sd_repeated_measures"))$prior_sd_repeated_measures)
+# and their densities
+pr_phyl <- density(pr_phyl[pr_phyl < 10], adjust = 1) # truncated for smoother display
+pr_rep <- density(pr_rep[pr_rep < 10], adjust = 1)
+
 
 p1 <- density(x, adjust = 1)
 p2 <- density(y, adjust = 1)
@@ -242,15 +240,19 @@ polygon(c(p1$x, rev(p1$x)), c(rep(0, length(p1$y)), rev(p1$y)),
         border = NA, col = adjustcolor("#3B99B1", 0.5))
 polygon(c(p2$x, rev(p2$x)), c(rep(0, length(p2$y)), rev(p2$y)),
         border = NA, col = adjustcolor("#EACB2B", 0.5))
-polygon(c(p3$x, rev(p3$x)), c(rep(0, length(p3$y)), rev(p3$y)),
-        border = NA, col = adjustcolor("grey", 0.7))
+polygon(c(pr_phyl$x, rev(pr_phyl$x)), c(rep(0, length(pr_phyl$y)), rev(pr_phyl$y)),
+        border = NA, col = adjustcolor("grey", 0.4))
+polygon(c(pr_rep$x, rev(pr_rep$x)), c(rep(0, length(pr_rep$y)), rev(pr_rep$y)),
+        border = NA, col = adjustcolor("grey", 0.4))
+
 points(p1$x, p1$y, type = "l", lwd = 0.5)
 points(p2$x, p2$y, type = "l", lwd = 0.5)
-points(p3$x, p3$y, type = "l", lwd = 0.5)
+points(pr_phyl$x, pr_phyl$y, type = "l", lwd = 0.5)
+points(pr_rep$x, pr_rep$y, type = "l", lwd = 0.5)
 box(bty = "l")
 
 legend("topright", ncol = 1, col = c("#3B99B1", "#EACB2B", "grey"),
-       legend = c("phylogenetic", "repeated measurements", "prior for both"),
+       legend = c("phylogenetic", "repeated measurements", "priors"),
        pch = 15, bty = "n")
 ```
 
@@ -456,17 +458,6 @@ m$species_fixed <- gsub("_", " ", m$species_fixed)
 # create reference keys that work inside tables...
 x <- unique(unlist(regmatches(x = m$reference, gregexpr("(@[a-z-]+[0-9]{4}[a-d]{0,1})", text = m$reference))))
 cat(paste(paste0("(ref:", gsub(pattern = "^@", "", x), ") ", x), collapse = "\n\n"))
-
-
-
-# saves <- c()
-# for (i in seq_len(length(m$reference))) {
-#   rkey <- gsub("@", "", m$reference[i])
-#   rkey <- gsub(" ", "", rkey)
-#   rkey <- gsub(";", ",", rkey)
-#   saves <- c(saves, rkey)
-# }
-# saves[saves == "Micheletta(pers.comm.)" ] <- "Micheletta (pers. comm.)" 
 ```
 
 \setlength\LTleft{-0.8in}
@@ -517,7 +508,6 @@ addtorow$command <- c(paste(
   "\\endlastfoot \n",
   sep = ""))
 
-# addtorow <- list(pos = list(0),command = "\\hline \\endhead ")
 print(xtab, 
       tabular.environment = "longtable",
       caption.placement = "top", 
@@ -529,34 +519,6 @@ print(xtab,
       size = "\\footnotesize", #  size="\\fontsize{7pt}{9pt}\\selectfont", 
       hline.after = c(-1, nrow(xtab)),
       add.to.row = addtorow)
-```
-
-
-```{r, echo=FALSE, eval=FALSE, results='markup'}
-m$reference <- saves
-x <- m[, -3]
-x$datasetname <- gsub("_", "\\\\_", x$datasetname)
-x$reference[saves != "Micheletta (pers. comm.)"] <- paste0("\\cite{", x$reference[saves != "Micheletta (pers. comm.)" ], "}")
-
-kable(x, format = "latex", 
-      longtable = TRUE,
-      caption = "Macaque dominance interaction networks",
-      row.names = FALSE, 
-      booktabs = TRUE,
-      linesep = "", 
-      escape = FALSE,
-      col.names = c("data set", "scientific name", "group size", "interactions", "sparseness", "source")) %>% 
-  kable_styling(font_size = 8, 
-                latex_options = c("repeat_header"), 
-                repeat_header_text = "(continued)", 
-                full_width = TRUE) %>% 
-  column_spec(column = 1, width = "1.7in") %>%
-  column_spec(column = 2, width = "1.1in", italic = TRUE) %>%
-  column_spec(column = 3, width = "0.4in") %>%
-  column_spec(column = 4, width = "0.4in") %>%
-  column_spec(column = 5, width = "0.7in") %>%
-  column_spec(column = 6, width = "1.6in")
-
 ```
 
 
