@@ -9,7 +9,7 @@ To install `EloSteepness.data` you require the `devtools` package (which you can
 You also require `EloRating` (`install.packages("EloRating")`)
 
 At this point you need to decide whether you want to *install* the vignettes (which include the relevant code to replicate the analyses).
-You could proceed without installing the vignettes and download the relevant documents [here](https://github.com/gobbios/EloSteepness.data/blob/main/vignette) instead (which will save time during installation of the package).
+You could proceed without installing the vignettes and download the relevant documents [here](https://github.com/gobbios/EloSteepness.data/blob/main/vignettes) instead (which will save time during installation of the package).
 
 Either strategy installs the package and allows access to the data.
 
@@ -57,4 +57,4 @@ Both vignettes use small subsets of the data for illustrative purposes, but also
 
 # References
 
-References for the empirical data sets used are in the document `empirical_references` (`vignette("empirical_references", package = "EloSteepness.data")`).
+References for the empirical data sets used are in the document `empirical_references` (`vignette("empirical_references", package = "EloSteepness.data")`, or [download the file here](https://github.com/gobbios/EloSteepness.data/blob/main/documents/empirical_references.pdf)).
