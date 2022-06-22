@@ -12,3 +12,4 @@ vignettes/phylogenetic_examples.original
 vignettes/method_evaluation_cache/
 vignettes/method_evaluation_files/
 vignettes/method_evaluation.original
+^\.github$

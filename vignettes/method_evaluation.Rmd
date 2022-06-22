@@ -134,7 +134,7 @@ for (i in seq_len(nrow(res))) {
 
   if (meth == "elo_bayes_fixed") {
     # sped up code:
-    xres <- elo_steepness_from_matrix(mat = mat, refresh = 0, cores = 4, iter = 1000, n_rand = 3)
+    xres <- elo_steepness_from_matrix(mat = mat, refresh = 0, cores = 2, iter = 1000, n_rand = 3)
     # original analysis:
     # xres <- elo_steepness_from_matrix(mat = mat, refresh = 0, cores = 4)
     res$steep_val[i] <- median(xres$steepness)

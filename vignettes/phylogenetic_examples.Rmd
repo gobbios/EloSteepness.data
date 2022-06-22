@@ -175,7 +175,7 @@ xmod1 <- cmdstan_model(stan_file = mod1, compile = TRUE)
 # sampling
 res1 <- suppressMessages(xmod1$sample(data = xdata,
                                       refresh = 0,
-                                      parallel_chains = 4,
+                                      parallel_chains = 2,
                                       iter_warmup = 1000,
                                       iter_sampling = 500,
                                       seed = 1,
@@ -186,7 +186,7 @@ res1 <- suppressMessages(xmod1$sample(data = xdata,
 # sampling
 res1 <- xmod1$sample(data = xdata,
                      refresh = 100,
-                     parallel_chains = 4,
+                     parallel_chains = 2,
                      iter_warmup = 1500,
                      iter_sampling = 2500,
                      seed = 1,
@@ -336,7 +336,7 @@ res2 <- suppressMessages(xmod2$sample(data = xdata,
                    refresh = 0,
                    iter_warmup = 1000,
                    iter_sampling = 500,
-                   parallel_chains = 4,
+                   parallel_chains = 2,
                    seed = 123,
                    adapt_delta = 0.8))
 ```
@@ -346,7 +346,7 @@ res2 <- suppressMessages(xmod2$sample(data = xdata,
 # sampling
 res2 <- xmod2$sample(data = xdata,
                      refresh = 0,
-                     parallel_chains = 4,
+                     parallel_chains = 2,
                      seed = 123,
                      adapt_delta = 0.9)
 ```
