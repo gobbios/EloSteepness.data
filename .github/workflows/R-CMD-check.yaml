@@ -74,7 +74,8 @@ jobs:
           cmdstanr::install_cmdstan(cores = 2)
           remotes::install_deps(dependencies = TRUE)
           remotes::install_cran("rcmdcheck")
-          remotes::install_cran("brms")
+          install.packages("igraph", type = "source")
+          install.packages("brms")
           install.packages("curl")
           remotes::install_github("gobbios/EloSteepness", build_vignettes = FALSE, dependencies = TRUE)
         shell: Rscript {0}

@@ -225,7 +225,7 @@ y <- as.numeric(extract(stanfit, pars = c("sd_repeated_measures"))$sd_repeated_m
 # priors
 xvals <- rstudent_t(10000, 3, 0, 2.5)
 while (any(xvals < 0)) {
-  xvals[xvals < 0] <- brms::rstudent_t(sum(xvals < 0), 3, 0, 2.5)
+  xvals[xvals < 0] <- rstudent_t(sum(xvals < 0), 3, 0, 2.5)
 }
 p3 <- density(xvals, adjust = 1)
 
