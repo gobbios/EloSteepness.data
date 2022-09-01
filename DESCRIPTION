@@ -1,7 +1,7 @@
 Package: EloSteepness.data
 Title: Data Sets for Package EloSteepness
-Version: 0.9.4
-Date: 2022-06-22
+Version: 0.9.5
+Date: 2022-07-27
 Authors@R: c(
   person(given="Christof", 
          family="Neumann", 
@@ -29,6 +29,7 @@ Suggests:
   rstan,
   cmdstanr,
   EloSteepness,
-  bookdown
+  bookdown,
+  brms
 Config/testthat/edition: 3
 VignetteBuilder: knitr

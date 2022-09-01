@@ -17,6 +17,12 @@ csl: apa.csl
 bibliography: refs.bib
 ---
 
+\noindent
+\rule{\textwidth}{0.4pt}
+
+\vspace{6pt}
+
+
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -37,6 +43,8 @@ suppressPackageStartupMessages(library(xtable))
 This document contains the code to replicate the two analyses of macaque hierarchy steepness (one analysis in the main text, one in the appendix) from *Extending Bayesian Elo-rating to quantify the steepness of dominance hierarchies* (https://doi.org/10.1101/2022.01.28.478016).
 It was built using `EloSteepness` (version `r packageVersion("EloSteepness")`) and `EloSteepness.data` (version `r  packageVersion("EloSteepness.data")`).
 
+Please note that in earlier iterations of this document and the accompanying preprint, we modeled steepness as beta distributed, as opposed to normally distributed.
+For completeness sake, the `Stan` code for those earlier models is still included in the package and we point out the necessary modifications to the `R` code below to fit them.
 
 
 ```{r setup}
@@ -48,14 +56,40 @@ library(ape)
 library(xtable) # just for table generation in this document
 ```
 
+\newpage
+
 # Comparative example from the main text
+
+
+First provide the path the to the `Stan` model code\footnote{Replace \texttt{"comparative\_steepness\_model\_1\_gaussian.stan"} with \texttt{"comparative\_steepness\_model\_1.stan"} to load and fit the original beta model.}.
 
 ```{r}
 # path to raw model code
-mod1 <- system.file("extdata/phylogenetic_examples/comparative_steepness_model_1.stan",
+mod1 <- system.file("extdata/phylogenetic_examples/comparative_steepness_model_1_gaussian.stan",
                     package = "EloSteepness.data")
 file.exists(mod1)
 ```
+
+
+Next, compile the model.
+
+```{r modelcompile1, cache=FALSE, warning = FALSE, include=FALSE, results = 'hide'}
+# compile stan model
+xmod1 <- cmdstan_model(stan_file = mod1, compile = TRUE)
+```
+
+```{r modelcompile1_display, eval = FALSE}
+# compile stan model
+xmod1 <- cmdstan_model(stan_file = mod1, compile = TRUE)
+```
+
+The raw `Stan` code can be inspected like this:
+
+```{r, eval=FALSE}
+xmod1$print()
+```
+
+The next chunks of code deal with data processing and preparation.
 
 ```{r}
 # load tree, matrices and key table
@@ -93,8 +127,8 @@ for (m in seq_len(nrow(specdata))) {
 
 For the sake of this vignette we reduce the number of species and also the number of interactions in the networks.
 We do this just because it speeds up the sampling from the model.
-With the full data set, this would take several hours (about four on my fairly old laptop).
-With the reduced data set this takes less time to run (but still takes a few minutes).
+With the full data set, this would take up to a few hours (about two on my fairly old laptop\footnote{and about 4 hours with the original beta model...}).
+With the reduced data set this takes less time to run (but still might take a few minutes).
 
 ```{r}
 # ignore these lines if you want to run the full data set
@@ -104,6 +138,8 @@ tree <- keep.tip(tree, specdata$spec)
 interaction_matrices <- lapply(interaction_matrices, function(x) ceiling(x / 5))
 ```
 
+
+Now prepare the data to pass it to `Stan`.
 
 ```{r}
 # prepare the data set as list for sending it to Stan
@@ -115,7 +151,6 @@ xdata$n_interactions_per_dataset <- as.integer(unlist(lapply(interaction_matrice
 xdata$n_total_interactions <- sum(xdata$n_interactions_per_dataset)
 xdata$interaction_index <- as.integer(seq_len(xdata$n_total_interactions))
 xdata$individual_index <- as.integer(seq_len(xdata$n_total_ids))
-
 
 # generate sequences
 set.seed(1)
@@ -156,16 +191,7 @@ xdata$rep_measures_predictor <- rep(1, nrow(specdata))
 ```
 
 
-```{r modelcompile1, cache=FALSE, warning = FALSE, include=FALSE, results = 'hide'}
-# compile stan model
-xmod1 <- cmdstan_model(stan_file = mod1, compile = TRUE)
-```
-
-```{r modelcompile1_display, eval = FALSE}
-# compile stan model
-xmod1 <- cmdstan_model(stan_file = mod1, compile = TRUE)
-```
-
+Now we can sample from the actual model.
 
 ```{r modelfit1, cache=FALSE, results='hide', echo=FALSE, warning = FALSE, include=FALSE}
 # sampling
@@ -189,11 +215,12 @@ res1 <- xmod1$sample(data = xdata,
                      adapt_delta = 0.9)
 ```
 
+And then inspect the results\footnote{Leave out (remove) \texttt{"sd\_residual"} when fitting the original beta model.}.
 
 ```{r, cache=FALSE}
 stanfit <- rstan::read_stan_csv(res1$output_files())
 xsummary <- summary(stanfit)$summary
-round(summary(stanfit, pars = c("sd_repeated_measures", "sd_phyl"))$summary, 2)
+round(summary(stanfit, pars = c("sd_repeated_measures", "sd_phyl", "sd_residual"))$summary, 2)
 
 # optional saving of results
 # save(xmod1, xsummary, res1, stanfit, xdata, specdata, tree, file = "comp_analysis_1.RData")
@@ -218,41 +245,72 @@ par(mar = c(3, 2.5, 1.5, 1))
 # posteriors
 x <- as.numeric(extract(stanfit, pars = c("sd_phyl"))$sd_phyl)
 y <- as.numeric(extract(stanfit, pars = c("sd_repeated_measures"))$sd_repeated_measures)
+z <- as.numeric(extract(stanfit, pars = c("sd_residual"))$sd_residual) # ignore for beta model
+
+# and their densities
+p1 <- density(x, adjust = 1)
+p2 <- density(y, adjust = 1)
+p3 <- density(z, adjust = 1) # ignore for beta model
+
 
 # priors
 pr_phyl <- as.numeric(extract(stanfit, pars = c("prior_sd_phyl"))$prior_sd_phyl)
 pr_rep <- as.numeric(extract(stanfit, pars = c("prior_sd_repeated_measures"))$prior_sd_repeated_measures)
+pr_resid <- as.numeric(extract(stanfit, pars = c("prior_sd_residual"))$prior_sd_residual) # ignore for beta model
+
 # and their densities
 pr_phyl <- density(pr_phyl[pr_phyl < 10], adjust = 1) # truncated for smoother display
 pr_rep <- density(pr_rep[pr_rep < 10], adjust = 1)
+pr_resid <- density(pr_resid[pr_resid < 10], adjust = 1) # ignore for beta model
 
+# plotting dimensions
+yr <- c(0, max(p1$y, p2$y, p3$y) * 1.05) # ignore for beta model
+# yr <- c(0, max(p1$y, p2$y) * 1.05) # use for beta model
+xr <- c(0, max(p1$x, p2$x, p3$x) * 1.05) # ignore for beta model
+# xr <- c(0, max(p1$x, p2$x) * 1.05) # use for beta model
+xr[2] <- ceiling(xr[2])
 
-p1 <- density(x, adjust = 1)
-p2 <- density(y, adjust = 1)
-yr <- c(0, max(p1$y, p2$y) * 1.05)
-xr <- c(0, max(p1$x, p2$x) * 1.05)
-xr[2] <- 2
+# set up empty plot
 plot(0, 0, type = "n", xlim = xr, ylim = yr, xaxs = "i", yaxs = "i", las = 1,
      axes = FALSE, xlab = "SD", ylab = "density")
 axis(1)
 
+# fill it
 polygon(c(p1$x, rev(p1$x)), c(rep(0, length(p1$y)), rev(p1$y)),
         border = NA, col = adjustcolor("#3B99B1", 0.5))
 polygon(c(p2$x, rev(p2$x)), c(rep(0, length(p2$y)), rev(p2$y)),
         border = NA, col = adjustcolor("#EACB2B", 0.5))
+polygon(c(p3$x, rev(p3$x)), c(rep(0, length(p3$y)), rev(p3$y)), 
+        border = NA, col = adjustcolor("#F5191C", 0.5)) # ignore for beta model
+
 polygon(c(pr_phyl$x, rev(pr_phyl$x)), c(rep(0, length(pr_phyl$y)), rev(pr_phyl$y)),
         border = NA, col = adjustcolor("grey", 0.4))
 polygon(c(pr_rep$x, rev(pr_rep$x)), c(rep(0, length(pr_rep$y)), rev(pr_rep$y)),
         border = NA, col = adjustcolor("grey", 0.4))
+polygon(c(pr_resid$x, rev(pr_resid$x)), c(rep(0, length(pr_resid$y)), rev(pr_resid$y)),
+        border = NA, col = adjustcolor("grey", 0.4)) # ignore for beta model
+
 
 points(p1$x, p1$y, type = "l", lwd = 0.5)
 points(p2$x, p2$y, type = "l", lwd = 0.5)
+points(p3$x, p3$y, type = "l", lwd = 0.5) # ignore for beta model
+
 points(pr_phyl$x, pr_phyl$y, type = "l", lwd = 0.5)
 points(pr_rep$x, pr_rep$y, type = "l", lwd = 0.5)
+points(pr_resid$x, pr_resid$y, type = "l", lwd = 0.5) # ignore for beta model
 box(bty = "l")
 
-legend("topright", ncol = 1, col = c("#3B99B1", "#EACB2B", "grey"),
-       legend = c("phylogenetic", "repeated measurements", "priors"),
+
+ldat <- matrix(c(
+  "#3B99B1", "phylogenetic",
+  "#EACB2B", "repeated measurements", 
+  "#F5191C", "residual", # comment/ignore this line for beta model
+  "grey", "priors"
+), ncol = 2, byrow = TRUE)
+
+legend("topright", ncol = 1, 
+       col = ldat[, 1],
+       legend = ldat[, 2],
        pch = 15, bty = "n")
 ```
 
@@ -261,11 +319,26 @@ legend("topright", ncol = 1, col = c("#3B99B1", "#EACB2B", "grey"),
 
 # Reanalysis of Balasubramaniam et al data set
 
+The code to replicate this analysis requires a bit less data pre-processing than the model above.
+Most crucially, we don't start from the original matrices since we don't have access to all the raw data.
+Rather, we use the steepness values as they are reported in the original publication and fit a simpler model\footnote{Replace \texttt{"comparative\_steepness\_model\_2\_gaussian.stan"} with \texttt{"comparative\_steepness\_model\_2.stan"} to load and fit the original beta model.}, i.e., without the actually applying the STEER algorithm.
+
 ```{r}
 # path to raw model code
-mod2 <- system.file("extdata/phylogenetic_examples/comparative_steepness_model_2.stan",
+mod2 <- system.file("extdata/phylogenetic_examples/comparative_steepness_model_2_gaussian.stan",
                     package = "EloSteepness.data")
 file.exists(mod2)
+```
+
+```{r modelcompile2, cache=FALSE, warning = FALSE, include=FALSE, results='hide'}
+# compile stan model
+xmod2 <- cmdstan_model(stan_file = mod2, compile = TRUE)
+```
+
+
+```{r modelcompile2_display, eval=FALSE}
+# compile stan model
+xmod2 <- cmdstan_model(stan_file = mod2, compile = TRUE)
 ```
 
 
@@ -294,7 +367,9 @@ length(tree$tip.label) == length(species) # sanity check
 xdata <- list()
 xdata$N <- nrow(specdata)
 xdata$the_steepness <- specdata$steepness
-
+# comment out/ignore the following line if fitting the original beta model
+# logit transform:
+xdata$the_steepness <- log(xdata$the_steepness / (1 - xdata$the_steepness))
 
 # phylogeny-related
 tree_mat <- vcv.phylo(tree, corr = TRUE) # covariance matrix
@@ -321,26 +396,16 @@ xdata$index_rep_measures <- species_index # the same as for the phyl part
 xdata$rep_measures_predictor <- rep(1, nrow(specdata))
 ```
 
-```{r modelcompile2, cache=FALSE, warning = FALSE, include=FALSE, results='hide'}
-# compile stan model
-xmod2 <- cmdstan_model(stan_file = mod2, compile = TRUE)
-```
-
-
-```{r modelcompile2_display, eval=FALSE}
-# compile stan model
-xmod2 <- cmdstan_model(stan_file = mod2, compile = TRUE)
-```
 
 ```{r modelfit2, cache=FALSE, results='hide', echo=FALSE, warning = FALSE}
 # sampling
 res2 <- suppressMessages(xmod2$sample(data = xdata,
                    refresh = 0,
                    iter_warmup = 1000,
-                   iter_sampling = 500,
+                   iter_sampling = 1000,
                    parallel_chains = 2,
                    seed = 123,
-                   adapt_delta = 0.8))
+                   adapt_delta = 0.99))
 ```
 
 
@@ -350,7 +415,7 @@ res2 <- xmod2$sample(data = xdata,
                      refresh = 0,
                      parallel_chains = 2,
                      seed = 123,
-                     adapt_delta = 0.9)
+                     adapt_delta = 0.99)
 ```
 
 
@@ -364,7 +429,7 @@ res2 <- xmod2$sample(data = xdata,
 stanfit2 <- read_stan_csv(res2$output_files())
 xsummary2 <- summary(stanfit2)$summary
 round(summary(stanfit2,
-      pars = c("sd_phyl", "sd_repeated_measures", "phi", "Intercept"))$summary, 2)
+      pars = c("sd_phyl", "sd_repeated_measures", "sd_residual"))$summary, 2)
 
 # optional saving of results
 # save(xmod2, xsummary2, res2, stanfit2, xdata, specdata, tree, file = "comp_analysis_2.RData")
@@ -372,6 +437,7 @@ round(summary(stanfit2,
 # plot in the manuscript
 sd_phyl <- sprintf("%.2f", xsummary2["sd_phyl[1]", 1])
 sd_rep <- sprintf("%.2f", xsummary2["sd_repeated_measures[1]", 1])
+sd_resid <- sprintf("%.2f", xsummary2["sd_residual", 1])
 
 par(mfrow = c(1, 2), family = "serif")
 par(family = "serif", mgp = c(1.8, 0.7, 0), las = 1, mar = c(2, 1, 1, 1))
@@ -391,22 +457,26 @@ par(mar = c(3, 2.5, 1.5, 1))
 # extract posterior samples for SDs and corresponding priors
 est_phyl <- as.numeric(extract(stanfit2, pars = c("sd_phyl"))$sd_phyl)
 est_rep <- as.numeric(extract(stanfit2, pars = c("sd_repeated_measures"))$sd_repeated_measures)
+est_resid <- as.numeric(extract(stanfit2, pars = c("sd_residual"))$sd_residual)
 
 pr_phyl <- as.numeric(extract(stanfit2, pars = c("prior_sd_phyl"))$prior_sd_phyl)
 pr_rep <- as.numeric(extract(stanfit2, pars = c("prior_sd_repeated_measures"))$prior_sd_repeated_measures)
+pr_resid <- as.numeric(extract(stanfit2, pars = c("prior_sd_residual"))$prior_sd_residual)
 
 # and densities of posteriors
 est_phyl <- density(est_phyl, adjust = 1)
 est_rep <- density(est_rep, adjust = 1)
+est_resid <- density(est_resid, adjust = 1)
 
 # and for priors
 pr_phyl <- density(pr_phyl[pr_phyl < 10], adjust = 1) # truncated for smoother display
 pr_rep <- density(pr_rep[pr_rep < 10], adjust = 1)
+pr_resid <- density(pr_resid[pr_resid < 10], adjust = 1)
 
 
 # data ranges for plot
-yr <- c(0, max(est_phyl$y, est_rep$y) * 1.05)
-xr <- c(0, max(est_phyl$x, est_rep$x) * 1.05)
+yr <- c(0, max(est_phyl$y, est_rep$y, est_resid$y) * 1.05)
+xr <- c(0, max(est_phyl$x, est_rep$x, est_resid$x) * 1.05)
 
 
 plot(0, 0, type = "n", xlim = xr, ylim = yr, xaxs = "i", yaxs = "i",
@@ -417,25 +487,132 @@ polygon(c(est_phyl$x, rev(est_phyl$x)), c(rep(0, length(est_phyl$y)), rev(est_ph
         border = NA, col = adjustcolor("#3B99B1", 0.5))
 polygon(c(est_rep$x, rev(est_rep$x)), c(rep(0, length(est_rep$y)), rev(est_rep$y)),
         border = NA, col = adjustcolor("#EACB2B", 0.5))
+polygon(c(est_resid$x, rev(est_resid$x)), c(rep(0, length(est_resid$y)), rev(est_resid$y)),
+        border = NA, col = adjustcolor("#F5191C", 0.5))
+
 polygon(c(pr_phyl$x, rev(pr_phyl$x)), c(rep(0, length(pr_phyl$y)), rev(pr_phyl$y)),
         border = NA, col = adjustcolor("grey", 0.4))
 polygon(c(pr_rep$x, rev(pr_rep$x)), c(rep(0, length(pr_rep$y)), rev(pr_rep$y)),
         border = NA, col = adjustcolor("grey", 0.4))
+polygon(c(pr_resid$x, rev(pr_resid$x)), c(rep(0, length(pr_resid$y)), rev(pr_resid$y)),
+        border = NA, col = adjustcolor("grey", 0.4))
 
 points(est_phyl$x, est_phyl$y, type = "l", lwd = 0.5)
 points(est_rep$x, est_rep$y, type = "l", lwd = 0.5)
+points(est_resid$x, est_resid$y, type = "l", lwd = 0.5)
+
 points(pr_phyl$x, pr_phyl$y, type = "l", lwd = 0.5)
 points(pr_rep$x, pr_rep$y, type = "l", lwd = 0.5)
+points(pr_resid$x, pr_resid$y, type = "l", lwd = 0.5)
 
 box(bty = "l")
 
-legend("topright", ncol = 1, col = c("#3B99B1", "#EACB2B", "grey"),
-       legend = c("phylogenetic", "repeated measurements", "priors"),
+legend("topright", ncol = 1, col = c("#3B99B1", "#EACB2B", "#F5191C", "grey"),
+       legend = c("phylogenetic", "repeated measurements", "residual", "priors"),
        pch = 15, bty = "n")
 ```
 
-\newpage
+And some posterior predictive checks.
+First we compare the observed steepness to our model's predictions using the logit-transformed values, i.e. we stay on the scale in which the modelling happened.
+The second plot back-transforms steepness to its original scale, but note that these transformations happened *after* the modelling.
 
+```{r, out.width="85%", fig.width=9, fig.height=4, fig.retina=2, echo=3:100}
+par(mfrow = c(1, 2), family = "serif")
+par(family = "serif", mgp = c(1.8, 0.7, 0), las = 1, mar = c(3, 2.5, 1.5, 1))
+
+set.seed(123)
+# the density of the observed steepnesses 
+# (logit of steepness reported in original paper)
+d_observed <- density(xdata$the_steepness, adjust = 1)
+
+# draws of modeled predictions for steepness
+d <- extract(stanfit2, "steepness_rep")$steepness_rep
+
+plot(0, 0, xlim = c(-2, 5), ylim = c(0, 0.8), type = "n", xaxs = "i", yaxs = "i",
+     xlab = "steepness (logit scale)", ylab = "density", axes = FALSE)
+axis(1)
+
+for (i in 1:50) {
+  p <- d[sample(nrow(d), 1), ]
+  p <- density(p, adjust = 1.5)
+  points(p$x, p$y, type = "l", lwd = 0.5)
+}
+
+# add observed
+points(d_observed$x, d_observed$y, type = "l", lwd = 3, col = "red")
+box(bty = "l")
+
+# and the same on the original scale
+d_observed <- density(specdata$steepness, adjust = 1)
+
+plot(0, 0, xlim = c(0, 1), ylim = c(0, 3), type = "n", xaxs = "i", yaxs = "i",
+     xlab = "steepness (original scale)", ylab = "density", axes = FALSE)
+axis(1)
+
+inv_logit <- function(x) exp(x) / (1 + exp(x))
+for (i in 1:50) {
+  # need to inverse logit posterior samples
+  p <- inv_logit(d[sample(nrow(d), 1), ])
+  
+  p <- density(p, adjust = 1.5)
+  points(p$x, p$y, type = "l", lwd = 0.5)
+}
+
+points(d_observed$x, d_observed$y, type = "l", lwd = 3, col = "red")
+box(bty = "l")
+```
+
+Finally, this latter model can also be fit using `brms`.
+
+```{r fitbrm, include=FALSE}
+require(brms)
+specdata <- data.frame(spec_phyl = sp,
+                       spec_rep = sp,
+                       steepness = st)
+# logit transform
+specdata$steepness_transformed <- log(specdata$steepness / (1 - specdata$steepness))
+
+maca_phylo <- ape::vcv.phylo(tree, corr = TRUE)
+pres <- brm(steepness_transformed ~ 1 + 
+              (1|gr(spec_phyl, cov = maca_phylo)) + 
+              (1|spec_rep),
+           data = specdata, 
+           data2 = list(maca_phylo = maca_phylo), 
+           family = gaussian(), 
+           sample_prior = TRUE, 
+           cores = 2,
+           control = list(adapt_delta = 0.99))
+```
+
+```{r fitbrm_dispaly, eval=FALSE}
+require(brms)
+specdata <- data.frame(spec_phyl = sp,
+                       spec_rep = sp,
+                       steepness = st)
+# logit transform
+specdata$steepness_transformed <- log(specdata$steepness / (1 - specdata$steepness))
+
+maca_phylo <- ape::vcv.phylo(tree, corr = TRUE)
+pres <- brm(steepness_transformed ~ 1 + 
+              (1|gr(spec_phyl, cov = maca_phylo)) + 
+              (1|spec_rep),
+           data = specdata, 
+           data2 = list(maca_phylo = maca_phylo), 
+           family = gaussian(), 
+           sample_prior = TRUE, 
+           cores = 2,
+           control = list(adapt_delta = 0.99))
+```
+
+```{r, eval=FALSE}
+pres
+```
+
+```{r, echo=FALSE}
+suppressWarnings(print(pres))
+```
+
+\newpage
 
 # Data summary
 
@@ -454,6 +631,8 @@ m$sparseness <- round(unlist(lapply(p, function(x)prunk(x)[1])), 2)
 
 m <- m[, c("datasetname", "species_fixed", "common_name", "group_size", "interactions", "sparseness", "reference")]
 m$species_fixed <- gsub("_", " ", m$species_fixed)
+# fix one specific typo:
+m$common_name[m$datasetname == "su2003_dom_2"] <- "Formosan macaque"
 
 # create reference keys that work inside tables...
 x <- unique(unlist(regmatches(x = m$reference, gregexpr("(@[a-z-]+[0-9]{4}[a-d]{0,1})", text = m$reference))))
@@ -468,7 +647,8 @@ cat(paste(paste0("(ref:", gsub(pattern = "^@", "", x), ") ", x), collapse = "\n\
 for (i in 1:nrow(m)) {
   x <- m$reference[i]
   y <- unlist(regmatches(x = x, gregexpr("(@[a-z-]+[0-9]{4}[a-d]{0,1})", text = x)))
-  for (k in y) {
+  k=y[1]
+  for (k in rev(y)) {
     x <- gsub(pattern = k, paste0("(ref:", gsub(pattern = "^@", "", k), ")"), x)
   }
   m$reference[i] <- x
@@ -521,8 +701,6 @@ print(xtab,
       add.to.row = addtorow)
 ```
 
-
 \newpage
-
 
 # References
