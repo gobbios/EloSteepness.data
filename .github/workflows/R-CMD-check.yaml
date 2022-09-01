@@ -76,6 +76,7 @@ jobs:
           remotes::install_cran("rcmdcheck")
           install.packages("curl")
           remotes::install_github("gobbios/EloSteepness", build_vignettes = FALSE, dependencies = TRUE)
+          remotes::install_github("paul-buerkner/brms", build_vignettes = FALSE, dependencies = TRUE)
         shell: Rscript {0}
 
 
