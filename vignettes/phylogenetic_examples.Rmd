@@ -37,6 +37,7 @@ suppressPackageStartupMessages(library(rstan))
 suppressPackageStartupMessages(library(cmdstanr))
 suppressPackageStartupMessages(library(ape))
 suppressPackageStartupMessages(library(xtable))
+suppressPackageStartupMessages(library(brms))
 ```
 
 
