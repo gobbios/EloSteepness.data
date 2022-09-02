@@ -1,6 +1,8 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/gobbios/EloSteepness.data/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gobbios/EloSteepness.data/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/gobbios/EloSteepness.data/branch/main/graph/badge.svg)](https://app.codecov.io/gh/gobbios/EloSteepness.data?branch=main)
+
 <!-- badges: end -->
 
 This package contains the data, code and results to replicate the analyses for [*Extending Bayesian Elo-rating to quantify dominance hierarchy steepness*](https://doi.org/10.1101/2022.01.28.478016).
