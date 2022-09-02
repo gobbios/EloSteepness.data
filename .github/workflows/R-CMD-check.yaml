@@ -67,6 +67,16 @@ jobs:
           writeLines(sprintf("R-%i.%i", getRversion()$major, getRversion()$minor), ".github/R-version")
         shell: Rscript {0}
 
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        env:
+          RHUB_PLATFORM: linux-x86_64-ubuntu-gcc
+        run: |
+          Rscript -e "remotes::install_github('r-hub/sysreqs')"
+          sysreqs=$(Rscript -e "cat(sysreqs::sysreq_commands('DESCRIPTION'))")
+          sudo -s eval "$sysreqs"
+          sudo apt-get install jags libudunits2-dev libgdal-dev
+
       - name: Install dependencies incl cmdstan
         run: |
           install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
@@ -75,7 +85,8 @@ jobs:
           remotes::install_deps(dependencies = TRUE)
           remotes::install_cran("rcmdcheck")
           install.packages("curl")
-          install.packages("EloSteepness")
+          remotes::install_cran("EloSteepness", build_vignettes = FALSE)
+          remotes::install_github("gobbios/EloSteepness.data", build_vignettes = FALSE)
           install.packages("brms")
           install.packages("covr")
         shell: Rscript {0}
