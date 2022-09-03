@@ -55,6 +55,7 @@ library(rstan)
 library(cmdstanr)
 library(ape)
 library(xtable) # just for table generation in this document
+library(brms) # just for one comparison model
 ```
 
 \newpage
@@ -566,7 +567,6 @@ box(bty = "l")
 Finally, this latter model can also be fit using `brms`.
 
 ```{r fitbrm, include=FALSE}
-require(brms)
 specdata <- data.frame(spec_phyl = sp,
                        spec_rep = sp,
                        steepness = st)
@@ -585,8 +585,7 @@ pres <- brm(steepness_transformed ~ 1 +
            control = list(adapt_delta = 0.99))
 ```
 
-```{r fitbrm_dispaly, eval=FALSE}
-require(brms)
+```{r fitbrm_display, eval=FALSE}
 specdata <- data.frame(spec_phyl = sp,
                        spec_rep = sp,
                        steepness = st)
