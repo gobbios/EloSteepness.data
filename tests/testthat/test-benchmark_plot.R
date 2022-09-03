@@ -1,7 +1,7 @@
 data("removal_global")
 # benchmark_plot(removal_global, empirical = TRUE, benchmark = "pij")
 x <- benchmark_plot(removal_global, empirical = FALSE, benchmark = "input")
-y <- benchmark_plot(removal_global, empirical = TRUE, benchmark = "pij")
+y <- na.omit(benchmark_plot(removal_global, empirical = TRUE, benchmark = "pij"))
 
 
 test_that("rhos and betas are within range", {
