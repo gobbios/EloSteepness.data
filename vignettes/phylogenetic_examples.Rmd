@@ -68,11 +68,11 @@ library(brms) # required only for one comparison model
 # Comparative example from the main text
 
 
-First provide the path the to the `Stan` model code\footnote{Replace \texttt{"comparative\_steepness\_model\_1\_gaussian.stan"} with \texttt{"comparative\_steepness\_model\_1.stan"} to load and fit the original beta model.}.
+First provide the path the to the `Stan` model code\footnote{Replace \texttt{"comparative\_model\_1\_gaussian.stan"} with \texttt{"comparative\_model\_1.stan"} to load and fit the original beta model.}.
 
 ```{r}
 # path to raw model code
-mod1 <- system.file("extdata/phylogenetic_examples/comparative_steepness_model_1_gaussian.stan",
+mod1 <- system.file("extdata/phylogenetic_examples/comparative_model_1_gaussian.stan",
                     package = "EloSteepness.data")
 file.exists(mod1)
 ```
@@ -328,11 +328,11 @@ legend("topright", ncol = 1,
 
 The code to replicate this analysis requires a bit less data pre-processing than the model above.
 Most crucially, we don't start from the original matrices since we don't have access to all the raw data.
-Rather, we use the steepness values as they are reported in the original publication and fit a simpler model\footnote{Replace \texttt{"comparative\_steepness\_model\_2\_gaussian.stan"} with \texttt{"comparative\_steepness\_model\_2.stan"} to load and fit the original beta model.}, i.e., without the actually applying the STEER algorithm.
+Rather, we use the steepness values as they are reported in the original publication and fit a simpler model\footnote{Replace \texttt{"comparative\_model\_2\_gaussian.stan"} with \texttt{"comparative\_model\_2.stan"} to load and fit the original beta model.}, i.e., without the actually applying the STEER algorithm.
 
 ```{r}
 # path to raw model code
-mod2 <- system.file("extdata/phylogenetic_examples/comparative_steepness_model_2_gaussian.stan",
+mod2 <- system.file("extdata/phylogenetic_examples/comparative_model_2_gaussian.stan",
                     package = "EloSteepness.data")
 file.exists(mod2)
 ```
