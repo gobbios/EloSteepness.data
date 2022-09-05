@@ -582,6 +582,7 @@ pres <- brm(steepness_transformed ~ 1 +
            family = gaussian(), 
            sample_prior = TRUE, 
            cores = 2,
+           backend = "cmdstanr",
            control = list(adapt_delta = 0.99))
 ```
 
@@ -601,6 +602,7 @@ pres <- brm(steepness_transformed ~ 1 +
            family = gaussian(), 
            sample_prior = TRUE, 
            cores = 2,
+           backend = "cmdstanr",
            control = list(adapt_delta = 0.99))
 ```
 
