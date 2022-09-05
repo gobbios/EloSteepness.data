@@ -7,8 +7,8 @@ functions {
   // cumwinprob2steep:
   //   calculates steepness from cumulative winning probs
 
-  real[] ProbFunction(vector start_vals, real k, int n_interactions, int n_ids, int[] winner_index, int[] loser_index) {
-    real result[n_interactions];
+  array[] real ProbFunction(vector start_vals, real k, int n_interactions, int n_ids, array[] int winner_index, array[] int loser_index) {
+    array[n_interactions] real result;
     real to_add;
     vector[n_ids] cur_rating = start_vals;
     for (i in 1:n_interactions) {
@@ -25,7 +25,7 @@ functions {
     return result;
   }
 
-  vector cum_winprob(vector start_vals, real k, int n_interactions, int n_ids, int[] winner_index, int[] loser_index) {
+  vector cum_winprob(vector start_vals, real k, int n_interactions, int n_ids, array[] int winner_index, array[] int loser_index) {
     real single_wp;
     real to_add;
     matrix[n_ids, n_ids] pairwise_winprobs;
@@ -122,38 +122,40 @@ functions {
 }
 
 data {
+  // using new array syntax that works fine with cmdstanr newer versions of rstan
+
   // global information
   int<lower=1> n_datasets; // total number of data sets (interaction matrices)
   int<lower=1> n_total_interactions; // total number of interactions accross all data sets
   int<lower=1> n_total_ids; // total number of individuals accross all data sets
 
   // per-dataset-info
-  int<lower=1> n_ids_per_dataset[n_datasets]; // ids per dataset
-  int<lower=1> n_interactions_per_dataset[n_datasets]; // interactions per dataset
+  array[n_datasets] int<lower=1> n_ids_per_dataset; // ids per dataset
+  array[n_datasets] int<lower=1> n_interactions_per_dataset; // interactions per dataset
 
   // navigating
-  int<lower=1> interaction_index[n_total_interactions];
-  int<lower=1> individual_index[n_total_ids];
-  int<lower=1> index_dataset_interactions_start[n_datasets]; // where do interactions start for a given dataset
-  int<lower=1> index_individuals_start[n_datasets]; // start points for individuals for all-individals vector
+  array[n_total_interactions] int<lower=1> interaction_index;
+  array[n_total_ids] int<lower=1> individual_index;
+  array[n_datasets] int<lower=1> index_dataset_interactions_start; // where do interactions start for a given dataset
+  array[n_datasets] int<lower=1> index_individuals_start; // start points for individuals for all-individals vector
 
   // interaction data
-  int<lower=1> winner[n_total_interactions, 1]; // winner's index (within data set); columns pertain to n_rand (not yet suported)
-  int<lower=1> loser[n_total_interactions, 1]; // losers's index (within data set); columns pertain to n_rand (not yet suported)
+  array[n_total_interactions, 1] int<lower=1> winner; // winner's index (within data set); columns pertain to n_rand (not yet suported)
+  array[n_total_interactions, 1] int<lower=1> loser; // losers's index (within data set); columns pertain to n_rand (not yet suported)
 
   // misc
-  int<lower=0> y[n_total_interactions]; // outcome, i.e. winner always wins -> all values are 1
+  array[n_total_interactions] int<lower=0> y; // outcome, i.e. winner always wins -> all values are 1
 
   // data for repeated measurements
   int<lower=1> N_repeated; // number of grouping levels for repeated measures
   int<lower=1> N_coeff_repeated; //number of coefficients (here: 1 [SD])
-  int<lower=1> index_rep_measures[n_datasets]; // grouping indicator per observation
+  array[n_datasets] int<lower=1> index_rep_measures; // grouping indicator per observation
   vector[n_datasets] rep_measures_predictor; // group-level predictor values (intercept only)
 
   // data for phylogeny related information
   int<lower=1> N_phyl;
   int<lower=1> N_coeff_phyl;
-  int<lower=1> spec_index[n_datasets];
+  array[n_datasets] int<lower=1> spec_index;
   matrix[N_phyl, N_phyl] chol_mat; // cholesky factor of phylogenetic correlation matrix
   vector[n_datasets] phyl_predictor; // group-level predictor values (intercept only)
 }
@@ -167,10 +169,10 @@ parameters {
   real<lower=0> sd_residual;
 
   vector<lower=0>[N_coeff_repeated] sd_repeated_measures; // group-level standard deviations for repeated measures
-  vector[N_repeated] blups_repeated_measures[N_coeff_repeated]; // BLUPS for repeated measurements
+  array[N_coeff_repeated] vector[N_repeated] blups_repeated_measures;  // BLUPS for repeated measurements
 
   vector<lower=0>[N_coeff_phyl] sd_phyl; // group-level standard deviations for phylogenetic effects
-  vector[N_phyl] blups_phyl[N_coeff_phyl];  // BLUPS for phylogenetic effects
+  array[N_coeff_phyl] vector[N_phyl] blups_phyl;  // BLUPS for phylogenetic effects
 }
 
 transformed parameters {
@@ -179,7 +181,7 @@ transformed parameters {
   vector[N_phyl] eff_phyl;  // actual group-level effects
 
   for (d in 1:n_datasets) {
-    int idx[n_ids_per_dataset[d]];
+    array[n_ids_per_dataset[d]] int idx;
     idx = segment(individual_index, index_individuals_start[d], n_ids_per_dataset[d]);
     EloStart[1, idx] = EloStart_raw[1, idx] - mean(EloStart_raw[1, idx]);
   }
@@ -195,8 +197,8 @@ model {
 
   // estimate steepness for each data set
   for (d in 1:n_datasets) {
-    int idx_individual[n_ids_per_dataset[d]];
-    int idx_interaction[n_interactions_per_dataset[d]];
+    array[n_ids_per_dataset[d]] int idx_individual; // new array syntax
+    array[n_interactions_per_dataset[d]] int idx_interaction; // new array syntax
     vector[n_ids_per_dataset[d]] cumwinprobs;
 
     k_values[d] ~ normal(0, 1);
@@ -257,8 +259,8 @@ generated quantities {
   vector[n_datasets] steepness_rep;
 
   for (d in 1:n_datasets) {
-    int idx[n_ids_per_dataset[d]];
-    int idx_interaction[n_interactions_per_dataset[d]];
+    array[n_ids_per_dataset[d]] int idx; // new array syntax
+    array[n_interactions_per_dataset[d]] int idx_interaction; // new array syntax
     vector[n_ids_per_dataset[d]] cumwinprobs;
     idx = segment(individual_index, index_individuals_start[d], n_ids_per_dataset[d]);
     idx_interaction = segment(interaction_index, index_dataset_interactions_start[d], n_interactions_per_dataset[d]);

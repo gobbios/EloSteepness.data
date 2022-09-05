@@ -42,10 +42,15 @@ suppressPackageStartupMessages(library(brms))
 
 
 This document contains the code to replicate the two analyses of macaque hierarchy steepness (one analysis in the main text, one in the appendix) from *Extending Bayesian Elo-rating to quantify the steepness of dominance hierarchies* (https://doi.org/10.1101/2022.01.28.478016).
-It was built using `EloSteepness` (version `r packageVersion("EloSteepness")`) and `EloSteepness.data` (version `r  packageVersion("EloSteepness.data")`).
+It was built using `EloSteepness` (version `r packageVersion("EloSteepness")`) and `EloSteepness.data` (version `r  packageVersion("EloSteepness.data")`). Models in this document were fitted using `cmdstanr` (version `r packageVersion("cmdstanr")`) with Stan (v. `r cmdstanr::cmdstan_version()`).
 
 Please note that in earlier iterations of this document and the accompanying preprint, we modeled steepness as beta distributed, as opposed to normally distributed.
 For completeness sake, the `Stan` code for those earlier models is still included in the package and we point out the necessary modifications to the `R` code below to fit them.
+
+A second thing to note is that we provide two versions of Stan files.
+These differ by whether they use the array syntax for declaring data structures ([see here for details](https://mc-stan.org/docs/reference-manual/brackets-array-syntax.html)).
+The code in the Stan files as referenced and used in this document relies on the new syntax and should work fine with recent versions of Stan used through `cmdstanr` (Stan v. > 2.26), but might fail if an outdated version of Stan is used.
+The alternative versions are installed in the same folder as the used ones, with `_oldsyntax` appended to the file name.
 
 
 ```{r setup}
@@ -54,8 +59,8 @@ library(EloSteepness.data)
 library(rstan)
 library(cmdstanr)
 library(ape)
-library(xtable) # just for table generation in this document
-library(brms) # just for one comparison model
+library(xtable) # required only for table generation in this document
+library(brms) # required only for one comparison model
 ```
 
 \newpage

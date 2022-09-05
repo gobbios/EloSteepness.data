@@ -5,13 +5,13 @@ data {
   // data for repeated measurements
   int<lower=1> N_repeated;  // number of grouping levels for repeated measures
   int<lower=1> N_coeff_repeated; // number of coefficients (here: 1)
-  int<lower=1> index_rep_measures[N]; // indexing per observation
+  array[N] int<lower=1> index_rep_measures; // indexing per observation // new array syntax
   vector[N] rep_measures_predictor; // group-level predictor (intercept only)
 
   // data for phylogeny related information
   int<lower=1> N_phyl; // number of grouping levels for phylogney (same as above...)
   int<lower=1> N_coeff_phyl; // number of coefficients (here: 1)
-  int<lower=1> spec_index[N]; // indexing per observation
+  array[N] int<lower=1> spec_index; // indexing per observation // new array syntax
   matrix[N_phyl, N_phyl] chol_mat; // cholesky factor of phylogenetic correlation matrix
   vector[N] phyl_predictor; // group-level predictor values (interecept only)
 }
@@ -23,11 +23,11 @@ parameters {
 
   // specific to repeated measurements
   vector<lower=0>[N_coeff_repeated] sd_repeated_measures;
-  vector[N_repeated] blups_repeated_measures[N_coeff_repeated];
+  array[N_coeff_repeated] vector[N_repeated] blups_repeated_measures; // new array syntax
 
   // specific to phylogeny
   vector<lower=0>[N_coeff_phyl] sd_phyl;
-  vector[N_phyl] blups_phyl[N_coeff_phyl];
+  array[N_coeff_phyl] vector[N_phyl] blups_phyl; // new array syntax
 }
 
 transformed parameters {
