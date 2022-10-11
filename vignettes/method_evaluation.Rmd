@@ -111,6 +111,7 @@ Or, if you want to run the entire set of artificial or empirical data sets:
 Now we loop through each combination of matrix and method to obtain the various steepness estimates (but we ignore the implementation using the original code by Goffe et al).
 Also note that we set a fairly low number of iterations and randomizations (`iter = 1000` and `n_rand = 3`) to speed up the code execution.
 As a result of the low number of iterations you might see warnings about low effective sample sizes, which should disappear if you increase the number of iterations.
+For the final runs we used `iter = 2000` (the default for `rstan::sampling`) and `n_rand = NULL`.
 
 ```{r}
 # for the evaluation of the different methods we ignore the original implementation

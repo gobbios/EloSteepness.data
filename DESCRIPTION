@@ -1,7 +1,7 @@
 Package: EloSteepness.data
 Title: Data Sets for Package EloSteepness
-Version: 0.9.5
-Date: 2022-07-27
+Version: 0.9.6
+Date: 2022-10-09
 Authors@R: c(
   person(given="Christof", 
          family="Neumann", 
