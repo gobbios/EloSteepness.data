@@ -11,7 +11,7 @@ To install `EloSteepness.data` you require the `devtools` package (which you can
 You also require `EloRating` (`install.packages("EloRating")`)
 
 At this point you need to decide whether you want to *install* the vignettes (which include the relevant code to replicate the analyses).
-You could proceed without installing the vignettes and download the relevant documents [here](https://github.com/gobbios/EloSteepness.data/blob/main/vignettes) instead (which will save time during installation of the package).
+You could proceed without installing the vignettes and download the documents that contain the relevant code [here](https://github.com/gobbios/EloSteepness.data/blob/main/documents/) and [here](https://github.com/gobbios/EloSteepness.data/blob/main/vignettes) instead (which will save time during installation of the package).
 
 Either strategy installs the package and allows access to the data.
 
@@ -23,7 +23,7 @@ Use:
 devtools::install_github("gobbios/EloSteepness.data", build_vignettes = FALSE)
 ```
 
-That should do the trick. 
+That should do the trick, give access to the data files.
 But note that in order to actually *run* the code in the vignettes, you need to install the packages listed below anyway.
 
 ## with vignettes
@@ -36,17 +36,27 @@ cmdstanr::check_cmdstan_toolchain(fix = TRUE)
 cmdstanr::install_cmdstan(cores = 2)
 ```
 
-And also, `EloSteepness` itself should probably be installed next ([see here for instructions](https://github.com/gobbios/EloSteepness)).
+Also `EloSteepness` itself should probably be installed next ([see here for instructions](https://github.com/gobbios/EloSteepness) if the following does not work).
 
 ```
-devtools::install_github("gobbios/EloSteepness", build_vignettes = FALSE, dependencies = TRUE)
+install.packages("EloSteepness")
 ```
+
+And finally, the following packages are required for some of the analyses as well:
+
+```
+install.packages("brms")
+install.packages("ape")
+```
+
 
 With this done, use:
 
 ```
 devtools::install_github("gobbios/EloSteepness.data", build_vignettes = TRUE, dependencies = TRUE)
 ```
+
+Note that this will likely take at least several minutes.
 
 
 # Replication of analyses
@@ -56,6 +66,11 @@ In the vignette `method_evaluation` (if you installed the package this document 
 In the vignette `vignette("phylogenetic_examples", package = "EloSteepness.data")` you can find the code to replicate the two examples using steepness in a comparative analysis ([or download the file here](https://github.com/gobbios/EloSteepness.data/blob/main/documents/phylogenetic_examples.pdf)).
 
 Both vignettes use small subsets of the data for illustrative purposes, but also allow replication of the full analyses.
+
+# Replication of additional figures
+
+In the vignette `vignette("additional_figures", package = "EloSteepness.data")` you can find the code to reproduce the figures in the manuscript that are not primary results ([or download the file here](https://github.com/gobbios/EloSteepness.data/blob/main/documents/additional_figures.pdf)).
+
 
 # References
 
